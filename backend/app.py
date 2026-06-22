@@ -1,6 +1,7 @@
 """假朋友词对照表 API 服务。"""
 
 import json
+from urllib.parse import quote
 
 from flask import Flask, Response, jsonify, request
 from flask_cors import CORS
@@ -309,12 +310,18 @@ def export_entries(pair_id: int):
         },
         "entries": [dict(r) for r in rows],
     }
-    filename = f"entries_{pair['lang_a']}_{pair['lang_b']}.json"
+    ascii_name = f"entries_pair{pair_id}.json"
+    utf8_name = f"entries_{pair['lang_a']}_{pair['lang_b']}.json"
+    encoded = quote(utf8_name, safe="")
     content = json.dumps(payload, ensure_ascii=False, indent=2)
     return Response(
         content,
         mimetype="application/json",
-        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+        headers={
+            "Content-Disposition": (
+                f'attachment; filename="{ascii_name}"; filename*=UTF-8\'\'{encoded}'
+            )
+        },
     )
 
 

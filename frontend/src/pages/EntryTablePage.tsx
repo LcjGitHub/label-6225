@@ -59,6 +59,7 @@ export function EntryTablePage() {
   const [importDialogOpen, setImportDialogOpen] = useState(false)
   const [importFile, setImportFile] = useState<File | null>(null)
   const [importResult, setImportResult] = useState<{ imported: number; skipped: number } | null>(null)
+  const [importError, setImportError] = useState<string | null>(null)
   const [snackbarOpen, setSnackbarOpen] = useState(false)
   const [snackbarMsg, setSnackbarMsg] = useState('')
   const fileInputRef = useRef<HTMLInputElement>(null)
@@ -134,13 +135,15 @@ export function EntryTablePage() {
     onSuccess: (result) => {
       invalidate()
       setImportResult(result)
+      setImportError(null)
     },
-    onError: () => {
-      setSnackbarMsg('导入失败，请检查文件格式')
-      setSnackbarOpen(true)
-      setImportDialogOpen(false)
-      setImportFile(null)
-      setImportResult(null)
+    onError: (err: unknown) => {
+      let msg = '导入失败，请检查文件格式'
+      if (err && typeof err === 'object' && 'response' in err) {
+        const resp = (err as { response?: { data?: { error?: string } } }).response
+        if (resp?.data?.error) msg = resp.data.error
+      }
+      setImportError(msg)
     },
   })
 
@@ -244,6 +247,7 @@ export function EntryTablePage() {
                 onClick={() => {
                   setImportFile(null)
                   setImportResult(null)
+                  setImportError(null)
                   setImportDialogOpen(true)
                 }}
                 size="small"
@@ -431,6 +435,7 @@ export function EntryTablePage() {
             setImportDialogOpen(false)
             setImportFile(null)
             setImportResult(null)
+            setImportError(null)
           }
         }}
         maxWidth="sm"
@@ -455,15 +460,27 @@ export function EntryTablePage() {
                 onChange={(e) => {
                   const file = e.target.files?.[0] ?? null
                   setImportFile(file)
+                  setImportError(null)
                 }}
               />
               <Button
                 variant="outlined"
                 onClick={() => fileInputRef.current?.click()}
                 fullWidth
+                disabled={importMutation.isPending}
               >
                 {importFile ? importFile.name : '选择文件'}
               </Button>
+              {importMutation.isPending && (
+                <Box sx={{ display: 'flex', justifyContent: 'center', mt: 2 }}>
+                  <CircularProgress size={28} />
+                </Box>
+              )}
+              {importError && (
+                <Alert severity="error" sx={{ mt: 2 }}>
+                  {importError}
+                </Alert>
+              )}
             </>
           )}
         </DialogContent>
@@ -474,6 +491,7 @@ export function EntryTablePage() {
                 setImportDialogOpen(false)
                 setImportFile(null)
                 setImportResult(null)
+                setImportError(null)
               }}
             >
               关闭
@@ -485,6 +503,7 @@ export function EntryTablePage() {
                   setImportDialogOpen(false)
                   setImportFile(null)
                   setImportResult(null)
+                  setImportError(null)
                 }}
                 disabled={importMutation.isPending}
               >
