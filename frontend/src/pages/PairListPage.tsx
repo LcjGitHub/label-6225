@@ -23,12 +23,17 @@ import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import TranslateIcon from '@mui/icons-material/Translate'
 import QuizIcon from '@mui/icons-material/Quiz'
+import StorageIcon from '@mui/icons-material/Storage'
+import ListAltIcon from '@mui/icons-material/ListAlt'
+import WarningAmberIcon from '@mui/icons-material/WarningAmber'
+import EmojiEventsIcon from '@mui/icons-material/EmojiEvents'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
   createPair,
   deletePair,
   fetchPairs,
+  fetchStatsSummary,
   updatePair,
 } from '../api/pairs'
 import { PairFormDialog } from '../components/PairFormDialog'
@@ -43,6 +48,15 @@ export function PairListPage() {
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ['pairs'],
     queryFn: fetchPairs,
+  })
+  const {
+    data: statsData,
+    isLoading: statsLoading,
+    isError: statsIsError,
+    error: statsError,
+  } = useQuery({
+    queryKey: ['statsSummary'],
+    queryFn: fetchStatsSummary,
   })
 
   const [formOpen, setFormOpen] = useState(false)
@@ -130,6 +144,90 @@ export function PairListPage() {
           假朋友词对照表
         </Typography>
       </Box>
+
+      {statsLoading && (
+        <Box sx={{ display: 'flex', justifyContent: 'center', py: 2, mb: 3 }}>
+          <CircularProgress size={24} />
+        </Box>
+      )}
+
+      {statsIsError && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          统计数据加载失败：
+          {statsError instanceof Error ? statsError.message : '未知错误'}
+        </Alert>
+      )}
+
+      {statsData && (
+        <Box
+          sx={{
+            display: 'grid',
+            gridTemplateColumns: { xs: '1fr', sm: 'repeat(2, 1fr)', md: 'repeat(4, 1fr)' },
+            gap: 2,
+            mb: 3,
+          }}
+        >
+          <Card sx={{ bgcolor: 'primary.50' }}>
+            <CardContent sx={{ py: 2, '&:last-child': { pb: 2 } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <StorageIcon color="primary" fontSize="small" />
+                <Typography variant="body2" color="text.secondary">
+                  语言对总数
+                </Typography>
+              </Box>
+              <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+                {statsData.pair_count}
+              </Typography>
+            </CardContent>
+          </Card>
+
+          <Card sx={{ bgcolor: 'success.50' }}>
+            <CardContent sx={{ py: 2, '&:last-child': { pb: 2 } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <ListAltIcon color="success" fontSize="small" />
+                <Typography variant="body2" color="text.secondary">
+                  词条总数
+                </Typography>
+              </Box>
+              <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+                {statsData.entry_count}
+              </Typography>
+            </CardContent>
+          </Card>
+
+          <Card sx={{ bgcolor: 'warning.50' }}>
+            <CardContent sx={{ py: 2, '&:last-child': { pb: 2 } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <WarningAmberIcon color="warning" fontSize="small" />
+                <Typography variant="body2" color="text.secondary">
+                  已填写易错说明
+                </Typography>
+              </Box>
+              <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+                {statsData.pitfall_count}
+                <Typography component="span" variant="body2" color="text.secondary" sx={{ ml: 0.5 }}>
+                  ({(statsData.pitfall_ratio * 100).toFixed(1)}%)
+                </Typography>
+              </Typography>
+            </CardContent>
+          </Card>
+
+          <Card sx={{ bgcolor: 'info.50' }}>
+            <CardContent sx={{ py: 2, '&:last-child': { pb: 2 } }}>
+              <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
+                <EmojiEventsIcon color="info" fontSize="small" />
+                <Typography variant="body2" color="text.secondary">
+                  词条最多语言对
+                </Typography>
+              </Box>
+              <Typography variant="h6" sx={{ fontWeight: 'bold' }} noWrap>
+                {statsData.top_pair_label || '—'}
+              </Typography>
+            </CardContent>
+          </Card>
+        </Box>
+      )}
+
       <Box
         sx={{
           display: 'flex',

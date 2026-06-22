@@ -24,6 +24,46 @@ def health():
     return jsonify({"status": "ok"})
 
 
+@app.get("/api/stats/summary")
+def get_stats_summary():
+    """获取数据统计概览。"""
+    from database import get_connection
+
+    with get_connection() as conn:
+        pair_count = conn.execute(
+            "SELECT COUNT(*) AS count FROM language_pairs"
+        ).fetchone()["count"]
+
+        entry_count = conn.execute(
+            "SELECT COUNT(*) AS count FROM entries"
+        ).fetchone()["count"]
+
+        pitfall_count = conn.execute(
+            "SELECT COUNT(*) AS count FROM entries WHERE pitfall IS NOT NULL AND pitfall != ''"
+        ).fetchone()["count"]
+
+        top_pair_row = conn.execute(
+            """
+            SELECT p.label, COUNT(e.id) AS entry_count
+            FROM language_pairs p
+            LEFT JOIN entries e ON e.pair_id = p.id
+            GROUP BY p.id
+            ORDER BY entry_count DESC, p.id ASC
+            LIMIT 1
+            """
+        ).fetchone()
+
+    pitfall_ratio = pitfall_count / entry_count if entry_count > 0 else 0.0
+
+    return jsonify({
+        "pair_count": pair_count,
+        "entry_count": entry_count,
+        "pitfall_count": pitfall_count,
+        "pitfall_ratio": round(pitfall_ratio, 4),
+        "top_pair_label": top_pair_row["label"] if top_pair_row and top_pair_row["entry_count"] > 0 else None,
+    })
+
+
 @app.get("/api/pairs")
 def list_pairs():
     """获取所有语言对。"""

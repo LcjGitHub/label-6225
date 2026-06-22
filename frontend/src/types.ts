@@ -42,3 +42,12 @@ export interface ImportResult {
   imported: number
   skipped: number
 }
+
+/** 数据统计概览 */
+export interface StatsSummary {
+  pair_count: number
+  entry_count: number
+  pitfall_count: number
+  pitfall_ratio: number
+  top_pair_label: string | null
+}

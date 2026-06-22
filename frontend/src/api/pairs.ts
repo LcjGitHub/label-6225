@@ -1,5 +1,5 @@
 import { apiClient } from './client'
-import type { Entry, EntryPayload, EntryQueryParams, ImportResult, LanguagePair, PairPayload } from '../types'
+import type { Entry, EntryPayload, EntryQueryParams, ImportResult, LanguagePair, PairPayload, StatsSummary } from '../types'
 
 /** 获取全部语言对 */
 export async function fetchPairs(): Promise<LanguagePair[]> {
@@ -111,5 +111,11 @@ export async function importEntries(
     formData,
     { headers: { 'Content-Type': 'multipart/form-data' } },
   )
+  return data
+}
+
+/** 获取数据统计概览 */
+export async function fetchStatsSummary(): Promise<StatsSummary> {
+  const { data } = await apiClient.get<StatsSummary>('/stats/summary')
   return data
 }
