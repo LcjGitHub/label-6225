@@ -1,12 +1,17 @@
-import { useMemo, useState } from 'react'
+import { useMemo, useRef, useState } from 'react'
 import {
   Alert,
   Box,
   Button,
   CircularProgress,
   Container,
+  Dialog,
+  DialogActions,
+  DialogContent,
+  DialogTitle,
   IconButton,
   Paper,
+  Snackbar,
   Table,
   TableBody,
   TableCell,
@@ -22,14 +27,18 @@ import AddIcon from '@mui/icons-material/Add'
 import ClearIcon from '@mui/icons-material/Clear'
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
+import FileDownloadIcon from '@mui/icons-material/FileDownload'
+import FileUploadIcon from '@mui/icons-material/FileUpload'
 import SearchIcon from '@mui/icons-material/Search'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link as RouterLink, useParams } from 'react-router-dom'
 import {
   createEntry,
   deleteEntry,
+  exportEntries,
   fetchEntries,
   fetchPair,
+  importEntries,
   updateEntry,
 } from '../api/pairs'
 import { EntryFormDialog } from '../components/EntryFormDialog'
@@ -47,6 +56,12 @@ export function EntryTablePage() {
   const [editingEntry, setEditingEntry] = useState<Entry | null>(null)
   const [keywordInput, setKeywordInput] = useState('')
   const [appliedKeyword, setAppliedKeyword] = useState('')
+  const [importDialogOpen, setImportDialogOpen] = useState(false)
+  const [importFile, setImportFile] = useState<File | null>(null)
+  const [importResult, setImportResult] = useState<{ imported: number; skipped: number } | null>(null)
+  const [snackbarOpen, setSnackbarOpen] = useState(false)
+  const [snackbarMsg, setSnackbarMsg] = useState('')
+  const fileInputRef = useRef<HTMLInputElement>(null)
 
   const pairQuery = useQuery({
     queryKey: ['pair', id],
@@ -100,6 +115,33 @@ export function EntryTablePage() {
   const deleteMutation = useMutation({
     mutationFn: deleteEntry,
     onSuccess: invalidate,
+  })
+
+  const exportMutation = useMutation({
+    mutationFn: () => exportEntries(id),
+    onSuccess: () => {
+      setSnackbarMsg('导出成功')
+      setSnackbarOpen(true)
+    },
+    onError: () => {
+      setSnackbarMsg('导出失败，请稍后重试')
+      setSnackbarOpen(true)
+    },
+  })
+
+  const importMutation = useMutation({
+    mutationFn: (file: File) => importEntries(id, file),
+    onSuccess: (result) => {
+      invalidate()
+      setImportResult(result)
+    },
+    onError: () => {
+      setSnackbarMsg('导入失败，请检查文件格式')
+      setSnackbarOpen(true)
+      setImportDialogOpen(false)
+      setImportFile(null)
+      setImportResult(null)
+    },
   })
 
   const langLabels = useMemo(
@@ -186,13 +228,36 @@ export function EntryTablePage() {
                 {pairQuery.data.lang_a} ↔ {pairQuery.data.lang_b}
               </Typography>
             </Box>
-            <Button
-              variant="contained"
-              startIcon={<AddIcon />}
-              onClick={handleOpenCreate}
-            >
-              新增词条
-            </Button>
+            <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                variant="outlined"
+                startIcon={<FileDownloadIcon />}
+                onClick={() => exportMutation.mutate()}
+                disabled={exportMutation.isPending}
+                size="small"
+              >
+                导出
+              </Button>
+              <Button
+                variant="outlined"
+                startIcon={<FileUploadIcon />}
+                onClick={() => {
+                  setImportFile(null)
+                  setImportResult(null)
+                  setImportDialogOpen(true)
+                }}
+                size="small"
+              >
+                导入
+              </Button>
+              <Button
+                variant="contained"
+                startIcon={<AddIcon />}
+                onClick={handleOpenCreate}
+              >
+                新增词条
+              </Button>
+            </Box>
           </Box>
 
           <Paper
@@ -357,6 +422,93 @@ export function EntryTablePage() {
         }}
         onSubmit={handleSubmit}
         isSubmitting={isBusy}
+      />
+
+      <Dialog
+        open={importDialogOpen}
+        onClose={() => {
+          if (!importMutation.isPending) {
+            setImportDialogOpen(false)
+            setImportFile(null)
+            setImportResult(null)
+          }
+        }}
+        maxWidth="sm"
+        fullWidth
+      >
+        <DialogTitle>批量导入词条</DialogTitle>
+        <DialogContent>
+          {importResult ? (
+            <Alert severity="success" sx={{ mt: 1 }}>
+              导入完成：成功 {importResult.imported} 条，跳过 {importResult.skipped} 条
+            </Alert>
+          ) : (
+            <>
+              <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                请选择 JSON 文件（支持导出格式或纯数组格式）
+              </Typography>
+              <input
+                ref={fileInputRef}
+                type="file"
+                accept=".json"
+                style={{ display: 'none' }}
+                onChange={(e) => {
+                  const file = e.target.files?.[0] ?? null
+                  setImportFile(file)
+                }}
+              />
+              <Button
+                variant="outlined"
+                onClick={() => fileInputRef.current?.click()}
+                fullWidth
+              >
+                {importFile ? importFile.name : '选择文件'}
+              </Button>
+            </>
+          )}
+        </DialogContent>
+        <DialogActions>
+          {importResult ? (
+            <Button
+              onClick={() => {
+                setImportDialogOpen(false)
+                setImportFile(null)
+                setImportResult(null)
+              }}
+            >
+              关闭
+            </Button>
+          ) : (
+            <>
+              <Button
+                onClick={() => {
+                  setImportDialogOpen(false)
+                  setImportFile(null)
+                  setImportResult(null)
+                }}
+                disabled={importMutation.isPending}
+              >
+                取消
+              </Button>
+              <Button
+                variant="contained"
+                disabled={!importFile || importMutation.isPending}
+                onClick={() => {
+                  if (importFile) importMutation.mutate(importFile)
+                }}
+              >
+                {importMutation.isPending ? '导入中…' : '确认导入'}
+              </Button>
+            </>
+          )}
+        </DialogActions>
+      </Dialog>
+
+      <Snackbar
+        open={snackbarOpen}
+        autoHideDuration={3000}
+        onClose={() => setSnackbarOpen(false)}
+        message={snackbarMsg}
       />
     </Container>
   )

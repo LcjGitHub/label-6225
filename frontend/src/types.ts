@@ -36,3 +36,9 @@ export interface EntryPayload {
 export interface EntryQueryParams {
   keyword?: string
 }
+
+/** 批量导入结果 */
+export interface ImportResult {
+  imported: number
+  skipped: number
+}

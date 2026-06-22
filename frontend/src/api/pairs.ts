@@ -1,5 +1,5 @@
 import { apiClient } from './client'
-import type { Entry, EntryPayload, EntryQueryParams, LanguagePair, PairPayload } from '../types'
+import type { Entry, EntryPayload, EntryQueryParams, ImportResult, LanguagePair, PairPayload } from '../types'
 
 /** 获取全部语言对 */
 export async function fetchPairs(): Promise<LanguagePair[]> {
@@ -73,4 +73,35 @@ export async function updateEntry(
 /** 删除词条 */
 export async function deleteEntry(entryId: number): Promise<void> {
   await apiClient.delete(`/entries/${entryId}`)
+}
+
+/** 导出指定语言对下全部词条为 JSON 文件 */
+export async function exportEntries(pairId: number): Promise<void> {
+  const response = await apiClient.get(`/pairs/${pairId}/entries/export`, {
+    responseType: 'blob',
+  })
+  const disposition = response.headers?.['content-disposition'] ?? ''
+  const match = disposition.match(/filename="?([^";\n]+)"?/)
+  const filename = match ? match[1] : 'entries.json'
+  const url = URL.createObjectURL(response.data)
+  const a = document.createElement('a')
+  a.href = url
+  a.download = filename
+  a.click()
+  URL.revokeObjectURL(url)
+}
+
+/** 从文件批量导入词条 */
+export async function importEntries(
+  pairId: number,
+  file: File,
+): Promise<ImportResult> {
+  const formData = new FormData()
+  formData.append('file', file)
+  const { data } = await apiClient.post<ImportResult>(
+    `/pairs/${pairId}/entries/import`,
+    formData,
+    { headers: { 'Content-Type': 'multipart/form-data' } },
+  )
+  return data
 }

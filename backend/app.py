@@ -1,6 +1,8 @@
 """假朋友词对照表 API 服务。"""
 
-from flask import Flask, jsonify, request
+import json
+
+from flask import Flask, Response, jsonify, request
 from flask_cors import CORS
 
 from database import init_db
@@ -280,6 +282,76 @@ def delete_entry(entry_id: int):
         conn.commit()
 
     return "", 204
+
+
+@app.get("/api/pairs/<int:pair_id>/entries/export")
+def export_entries(pair_id: int):
+    """将指定语言对下全部词条导出为 JSON 文件。"""
+    from database import get_connection
+
+    with get_connection() as conn:
+        pair = conn.execute(
+            "SELECT * FROM language_pairs WHERE id = ?", (pair_id,)
+        ).fetchone()
+        if not pair:
+            return jsonify({"error": "语言对不存在"}), 404
+
+        rows = conn.execute(
+            "SELECT word_a, word_b, meaning, pitfall FROM entries WHERE pair_id = ? ORDER BY id",
+            (pair_id,),
+        ).fetchall()
+
+    payload = {
+        "pair": {
+            "lang_a": pair["lang_a"],
+            "lang_b": pair["lang_b"],
+            "label": pair["label"],
+        },
+        "entries": [dict(r) for r in rows],
+    }
+    filename = f"entries_{pair['lang_a']}_{pair['lang_b']}.json"
+    content = json.dumps(payload, ensure_ascii=False, indent=2)
+    return Response(
+        content,
+        mimetype="application/json",
+        headers={"Content-Disposition": f'attachment; filename="{filename}"'},
+    )
+
+
+@app.post("/api/pairs/<int:pair_id>/entries/import")
+def import_entries(pair_id: int):
+    """从上传的 JSON 文件批量导入词条，跳过与现有甲乙词完全相同的重复项。"""
+    from database import batch_import_entries, get_connection
+
+    with get_connection() as conn:
+        pair = conn.execute(
+            "SELECT id FROM language_pairs WHERE id = ?", (pair_id,)
+        ).fetchone()
+        if not pair:
+            return jsonify({"error": "语言对不存在"}), 404
+
+    file = request.files.get("file")
+    if not file:
+        return jsonify({"error": "未上传文件"}), 400
+
+    try:
+        raw = file.read().decode("utf-8")
+        data = json.loads(raw)
+    except (UnicodeDecodeError, json.JSONDecodeError) as exc:
+        return jsonify({"error": f"文件解析失败：{exc}"}), 400
+
+    if isinstance(data, dict) and "entries" in data:
+        items = data["entries"]
+    elif isinstance(data, list):
+        items = data
+    else:
+        return jsonify({"error": "文件格式不正确，需要包含 entries 数组或直接为数组"}), 400
+
+    if not isinstance(items, list):
+        return jsonify({"error": "entries 字段必须为数组"}), 400
+
+    result = batch_import_entries(pair_id, items)
+    return jsonify(result)
 
 
 if __name__ == "__main__":

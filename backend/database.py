@@ -15,6 +15,49 @@ def get_connection() -> sqlite3.Connection:
     return conn
 
 
+def batch_import_entries(pair_id: int, items: list[dict]) -> dict:
+    """批量导入词条，跳过与现有甲乙词完全相同的重复项。
+
+    返回 {"imported": 成功条数, "skipped": 跳过条数}。
+    """
+    imported = 0
+    skipped = 0
+    with get_connection() as conn:
+        existing = conn.execute(
+            "SELECT word_a, word_b FROM entries WHERE pair_id = ?",
+            (pair_id,),
+        ).fetchall()
+        existing_set = {(r["word_a"], r["word_b"]) for r in existing}
+
+        to_insert = []
+        for item in items:
+            word_a = (item.get("word_a") or "").strip()
+            word_b = (item.get("word_b") or "").strip()
+            meaning = (item.get("meaning") or "").strip()
+            pitfall = (item.get("pitfall") or "").strip()
+            if not word_a or not word_b or not meaning:
+                skipped += 1
+                continue
+            if (word_a, word_b) in existing_set:
+                skipped += 1
+                continue
+            to_insert.append((pair_id, word_a, word_b, meaning, pitfall))
+            existing_set.add((word_a, word_b))
+
+        if to_insert:
+            conn.executemany(
+                """
+                INSERT INTO entries (pair_id, word_a, word_b, meaning, pitfall)
+                VALUES (?, ?, ?, ?, ?)
+                """,
+                to_insert,
+            )
+            conn.commit()
+            imported = len(to_insert)
+
+    return {"imported": imported, "skipped": skipped}
+
+
 def init_db() -> None:
     """创建表结构（若不存在）。"""
     with get_connection() as conn:
