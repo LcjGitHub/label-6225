@@ -33,7 +33,7 @@ import {
   updateEntry,
 } from '../api/pairs'
 import { EntryFormDialog } from '../components/EntryFormDialog'
-import type { Entry, EntryPayload } from '../types'
+import type { Entry, EntryPayload, EntryQueryParams } from '../types'
 
 /**
  * 词条对照 CRUD 页
@@ -56,8 +56,13 @@ export function EntryTablePage() {
 
   const entriesQuery = useQuery({
     queryKey: ['entries', id, appliedKeyword],
-    queryFn: () => fetchEntries(id, appliedKeyword || undefined),
+    queryFn: () => {
+      const params: EntryQueryParams = {}
+      if (appliedKeyword) params.keyword = appliedKeyword
+      return fetchEntries(id, Object.keys(params).length > 0 ? params : undefined)
+    },
     enabled: Number.isFinite(id),
+    placeholderData: (previousData) => previousData,
   })
 
   const invalidate = () => {
@@ -246,14 +251,32 @@ export function EntryTablePage() {
             </Alert>
           )}
 
-          {entriesQuery.isLoading && <CircularProgress size={28} />}
+          {entriesQuery.isLoading && !entriesQuery.data && (
+            <Box sx={{ display: 'flex', justifyContent: 'center', py: 4 }}>
+              <CircularProgress size={28} />
+            </Box>
+          )}
 
           {entriesQuery.isError && (
             <Alert severity="error">词条加载失败</Alert>
           )}
 
           {entriesQuery.data && (
-            <TableContainer component={Paper}>
+            <TableContainer component={Paper} sx={{ position: 'relative' }}>
+              {entriesQuery.isFetching && (
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    right: 0,
+                    height: 3,
+                    bgcolor: 'primary.main',
+                    opacity: 0.6,
+                    zIndex: 1,
+                  }}
+                />
+              )}
               <Table size="small">
                 <TableHead>
                   <TableRow>
@@ -270,12 +293,22 @@ export function EntryTablePage() {
                   {entriesQuery.data.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={5} align="center">
-                        暂无词条，点击「新增词条」添加
+                        {appliedKeyword
+                          ? '未找到匹配的词条'
+                          : '暂无词条，点击「新增词条」添加'}
                       </TableCell>
                     </TableRow>
                   ) : (
                     entriesQuery.data.map((entry) => (
-                      <TableRow key={entry.id} hover>
+                      <TableRow
+                        key={entry.id}
+                        hover
+                        sx={
+                          entriesQuery.isFetching
+                            ? { opacity: 0.6, transition: 'opacity 0.2s' }
+                            : undefined
+                        }
+                      >
                         <TableCell>{entry.word_a}</TableCell>
                         <TableCell>{entry.word_b}</TableCell>
                         <TableCell sx={{ whiteSpace: 'pre-wrap' }}>

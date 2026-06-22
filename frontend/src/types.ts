@@ -31,3 +31,8 @@ export interface EntryPayload {
   meaning: string
   pitfall: string
 }
+
+/** 词条列表查询参数 */
+export interface EntryQueryParams {
+  keyword?: string
+}

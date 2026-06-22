@@ -1,5 +1,5 @@
 import { apiClient } from './client'
-import type { Entry, EntryPayload, LanguagePair, PairPayload } from '../types'
+import type { Entry, EntryPayload, EntryQueryParams, LanguagePair, PairPayload } from '../types'
 
 /** 获取全部语言对 */
 export async function fetchPairs(): Promise<LanguagePair[]> {
@@ -41,9 +41,8 @@ export async function deletePair(pairId: number): Promise<void> {
 /** 获取语言对下的词条列表，支持关键词搜索 */
 export async function fetchEntries(
   pairId: number,
-  keyword?: string,
+  params?: EntryQueryParams,
 ): Promise<Entry[]> {
-  const params = keyword ? { keyword } : undefined
   const { data } = await apiClient.get<Entry[]>(`/pairs/${pairId}/entries`, {
     params,
   })
