@@ -67,8 +67,11 @@ def create_pair():
 
     with get_connection() as conn:
         existing = conn.execute(
-            "SELECT id FROM language_pairs WHERE lang_a = ? AND lang_b = ?",
-            (lang_a, lang_b),
+            """
+            SELECT id FROM language_pairs 
+            WHERE (lang_a = ? AND lang_b = ?) OR (lang_a = ? AND lang_b = ?)
+            """,
+            (lang_a, lang_b, lang_b, lang_a),
         ).fetchone()
         if existing:
             return jsonify({"error": "该语言组合已存在"}), 400
@@ -109,8 +112,12 @@ def update_pair(pair_id: int):
             return jsonify({"error": "语言对不存在"}), 404
 
         duplicate = conn.execute(
-            "SELECT id FROM language_pairs WHERE lang_a = ? AND lang_b = ? AND id != ?",
-            (lang_a, lang_b, pair_id),
+            """
+            SELECT id FROM language_pairs 
+            WHERE ((lang_a = ? AND lang_b = ?) OR (lang_a = ? AND lang_b = ?))
+            AND id != ?
+            """,
+            (lang_a, lang_b, lang_b, lang_a, pair_id),
         ).fetchone()
         if duplicate:
             return jsonify({"error": "该语言组合已存在"}), 400

@@ -46,6 +46,7 @@ export function PairListPage() {
 
   const [formOpen, setFormOpen] = useState(false)
   const [editingPair, setEditingPair] = useState<LanguagePair | null>(null)
+  const [formError, setFormError] = useState<string | null>(null)
   const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false)
   const [deletingPair, setDeletingPair] = useState<LanguagePair | null>(null)
 
@@ -54,6 +55,9 @@ export function PairListPage() {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['pairs'] })
       setFormOpen(false)
+    },
+    onError: (err: any) => {
+      setFormError(err?.response?.data?.error || '操作失败，请稍后重试')
     },
   })
 
@@ -70,6 +74,9 @@ export function PairListPage() {
       setFormOpen(false)
       setEditingPair(null)
     },
+    onError: (err: any) => {
+      setFormError(err?.response?.data?.error || '操作失败，请稍后重试')
+    },
   })
 
   const deleteMutation = useMutation({
@@ -83,11 +90,13 @@ export function PairListPage() {
 
   const handleOpenCreate = () => {
     setEditingPair(null)
+    setFormError(null)
     setFormOpen(true)
   }
 
   const handleOpenEdit = (pair: LanguagePair) => {
     setEditingPair(pair)
+    setFormError(null)
     setFormOpen(true)
   }
 
@@ -152,17 +161,6 @@ export function PairListPage() {
         </Alert>
       )}
 
-      {(createMutation.isError || updateMutation.isError) && (
-        <Alert severity="error" sx={{ mb: 2 }}>
-          {createMutation.error instanceof Error ||
-          updateMutation.error instanceof Error
-            ? (
-                createMutation.error || updateMutation.error
-              )?.message
-            : '操作失败'}
-        </Alert>
-      )}
-
       {deleteMutation.isError && (
         <Alert severity="error" sx={{ mb: 2 }}>
           删除失败：
@@ -213,7 +211,11 @@ export function PairListPage() {
       <PairFormDialog
         open={formOpen}
         initial={editingPair}
-        onClose={() => setFormOpen(false)}
+        error={formError}
+        onClose={() => {
+          setFormOpen(false)
+          setFormError(null)
+        }}
         onSubmit={handleSubmit}
         isSubmitting={isSubmitting}
       />

@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react'
 import {
+  Alert,
   Button,
   Dialog,
   DialogActions,
@@ -12,6 +13,7 @@ import type { LanguagePair, PairPayload } from '../types'
 interface PairFormDialogProps {
   open: boolean
   initial?: LanguagePair | null
+  error?: string | null
   onClose: () => void
   onSubmit: (payload: PairPayload) => void
   isSubmitting?: boolean
@@ -29,6 +31,7 @@ const emptyForm: PairPayload = {
 export function PairFormDialog({
   open,
   initial,
+  error = null,
   onClose,
   onSubmit,
   isSubmitting = false,
@@ -66,6 +69,7 @@ export function PairFormDialog({
     <Dialog open={open} onClose={onClose} fullWidth maxWidth="sm">
       <DialogTitle>{initial ? '编辑语言对' : '新增语言对'}</DialogTitle>
       <DialogContent sx={{ display: 'flex', flexDirection: 'column', gap: 2, pt: 1 }}>
+        {error && <Alert severity="error">{error}</Alert>}
         <TextField
           label="语言甲名称"
           value={form.lang_a}
