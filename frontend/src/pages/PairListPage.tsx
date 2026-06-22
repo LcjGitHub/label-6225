@@ -182,17 +182,20 @@ export function PairListPage() {
             </CardContent>
           </CardActionArea>
           <CardActions sx={{ justifyContent: 'flex-end', pt: 0 }}>
-            <Tooltip title="测验">
-              <IconButton
-                size="small"
-                color="primary"
-                onClick={(e) => {
-                  e.stopPropagation()
-                  navigate(`/pairs/${pair.id}/quiz`)
-                }}
-              >
-                <QuizIcon fontSize="small" />
-              </IconButton>
+            <Tooltip title={(pair.entry_count ?? 0) === 0 ? '暂无词条，无法测验' : '测验'}>
+              <span>
+                <IconButton
+                  size="small"
+                  color="primary"
+                  disabled={(pair.entry_count ?? 0) === 0}
+                  onClick={(e) => {
+                    e.stopPropagation()
+                    navigate(`/pairs/${pair.id}/quiz`)
+                  }}
+                >
+                  <QuizIcon fontSize="small" />
+                </IconButton>
+              </span>
             </Tooltip>
             <Tooltip title="编辑">
               <IconButton

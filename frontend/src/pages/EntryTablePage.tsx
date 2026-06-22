@@ -233,15 +233,20 @@ export function EntryTablePage() {
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', gap: 1 }}>
-              <Button
-                variant="outlined"
-                startIcon={<QuizIcon />}
-                component={RouterLink}
-                to={`/pairs/${id}/quiz`}
-                size="small"
-              >
-                测验
-              </Button>
+              <Tooltip title={entriesQuery.data && entriesQuery.data.length === 0 ? '暂无词条，无法测验' : '测验'}>
+                <span>
+                  <Button
+                    variant="outlined"
+                    startIcon={<QuizIcon />}
+                    component={RouterLink}
+                    to={`/pairs/${id}/quiz`}
+                    size="small"
+                    disabled={!entriesQuery.data || entriesQuery.data.length === 0}
+                  >
+                    测验
+                  </Button>
+                </span>
+              </Tooltip>
               <Button
                 variant="outlined"
                 startIcon={<FileDownloadIcon />}
