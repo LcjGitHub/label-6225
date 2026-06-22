@@ -38,9 +38,15 @@ export async function deletePair(pairId: number): Promise<void> {
   await apiClient.delete(`/pairs/${pairId}`)
 }
 
-/** 获取语言对下的词条列表 */
-export async function fetchEntries(pairId: number): Promise<Entry[]> {
-  const { data } = await apiClient.get<Entry[]>(`/pairs/${pairId}/entries`)
+/** 获取语言对下的词条列表，支持关键词搜索 */
+export async function fetchEntries(
+  pairId: number,
+  keyword?: string,
+): Promise<Entry[]> {
+  const params = keyword ? { keyword } : undefined
+  const { data } = await apiClient.get<Entry[]>(`/pairs/${pairId}/entries`, {
+    params,
+  })
   return data
 }
 

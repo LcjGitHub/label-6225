@@ -158,8 +158,10 @@ def delete_pair(pair_id: int):
 
 @app.get("/api/pairs/<int:pair_id>/entries")
 def list_entries(pair_id: int):
-    """获取某语言对下的全部词条。"""
+    """获取某语言对下的词条，支持关键词模糊搜索。"""
     from database import get_connection
+
+    keyword = (request.args.get("keyword") or "").strip()
 
     with get_connection() as conn:
         pair = conn.execute(
@@ -167,12 +169,25 @@ def list_entries(pair_id: int):
         ).fetchone()
         if not pair:
             return jsonify({"error": "语言对不存在"}), 404
-        rows = conn.execute(
-            """
-            SELECT * FROM entries WHERE pair_id = ? ORDER BY id
-            """,
-            (pair_id,),
-        ).fetchall()
+
+        if keyword:
+            like_pattern = f"%{keyword}%"
+            rows = conn.execute(
+                """
+                SELECT * FROM entries
+                WHERE pair_id = ?
+                  AND (word_a LIKE ? OR word_b LIKE ? OR meaning LIKE ? OR pitfall LIKE ?)
+                ORDER BY id
+                """,
+                (pair_id, like_pattern, like_pattern, like_pattern, like_pattern),
+            ).fetchall()
+        else:
+            rows = conn.execute(
+                """
+                SELECT * FROM entries WHERE pair_id = ? ORDER BY id
+                """,
+                (pair_id,),
+            ).fetchall()
     return jsonify([row_to_dict(r) for r in rows])
 
 

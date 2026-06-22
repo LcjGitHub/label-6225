@@ -13,13 +13,16 @@ import {
   TableContainer,
   TableHead,
   TableRow,
+  TextField,
   Tooltip,
   Typography,
 } from '@mui/material'
 import ArrowBackIcon from '@mui/icons-material/ArrowBack'
 import AddIcon from '@mui/icons-material/Add'
+import ClearIcon from '@mui/icons-material/Clear'
 import DeleteIcon from '@mui/icons-material/Delete'
 import EditIcon from '@mui/icons-material/Edit'
+import SearchIcon from '@mui/icons-material/Search'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link as RouterLink, useParams } from 'react-router-dom'
 import {
@@ -42,6 +45,8 @@ export function EntryTablePage() {
 
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingEntry, setEditingEntry] = useState<Entry | null>(null)
+  const [keywordInput, setKeywordInput] = useState('')
+  const [appliedKeyword, setAppliedKeyword] = useState('')
 
   const pairQuery = useQuery({
     queryKey: ['pair', id],
@@ -50,14 +55,23 @@ export function EntryTablePage() {
   })
 
   const entriesQuery = useQuery({
-    queryKey: ['entries', id],
-    queryFn: () => fetchEntries(id),
+    queryKey: ['entries', id, appliedKeyword],
+    queryFn: () => fetchEntries(id, appliedKeyword || undefined),
     enabled: Number.isFinite(id),
   })
 
   const invalidate = () => {
     queryClient.invalidateQueries({ queryKey: ['entries', id] })
     queryClient.invalidateQueries({ queryKey: ['pairs'] })
+  }
+
+  const handleSearch = () => {
+    setAppliedKeyword(keywordInput.trim())
+  }
+
+  const handleClear = () => {
+    setKeywordInput('')
+    setAppliedKeyword('')
   }
 
   const createMutation = useMutation({
@@ -175,6 +189,56 @@ export function EntryTablePage() {
               新增词条
             </Button>
           </Box>
+
+          <Paper
+            sx={{
+              p: 2,
+              mb: 2,
+              display: 'flex',
+              gap: 1,
+              flexWrap: 'wrap',
+              alignItems: 'center',
+            }}
+          >
+            <TextField
+              size="small"
+              placeholder="搜索甲词、乙词、含义、易错说明"
+              value={keywordInput}
+              onChange={(e) => setKeywordInput(e.target.value)}
+              onKeyDown={(e) => {
+                if (e.key === 'Enter') handleSearch()
+              }}
+              sx={{ flex: '1 1 280px', minWidth: 200 }}
+              slotProps={{
+                input: {
+                  startAdornment: <SearchIcon fontSize="small" sx={{ mr: 1, color: 'text.secondary' }} />,
+                },
+              }}
+            />
+            <Button
+              variant="outlined"
+              startIcon={<SearchIcon />}
+              onClick={handleSearch}
+              size="small"
+            >
+              搜索
+            </Button>
+            <Button
+              variant="outlined"
+              color="inherit"
+              startIcon={<ClearIcon />}
+              onClick={handleClear}
+              size="small"
+              disabled={!appliedKeyword && !keywordInput}
+            >
+              清空
+            </Button>
+            {appliedKeyword && (
+              <Typography variant="body2" color="text.secondary" sx={{ ml: 1 }}>
+                关键词：「{appliedKeyword}」 · 匹配 {entriesQuery.data?.length ?? 0} 条
+              </Typography>
+            )}
+          </Paper>
 
           {(createMutation.isError || updateMutation.isError || deleteMutation.isError) && (
             <Alert severity="error" sx={{ mb: 2 }}>
