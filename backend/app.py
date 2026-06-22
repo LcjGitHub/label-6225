@@ -52,6 +52,103 @@ def get_pair(pair_id: int):
     return jsonify(row_to_dict(row))
 
 
+@app.post("/api/pairs")
+def create_pair():
+    """创建语言对。"""
+    from database import get_connection
+
+    data = request.get_json(silent=True) or {}
+    lang_a = (data.get("lang_a") or "").strip()
+    lang_b = (data.get("lang_b") or "").strip()
+    label = (data.get("label") or "").strip()
+
+    if not lang_a or not lang_b or not label:
+        return jsonify({"error": "语言甲名称、语言乙名称、展示标题为必填项"}), 400
+
+    with get_connection() as conn:
+        existing = conn.execute(
+            "SELECT id FROM language_pairs WHERE lang_a = ? AND lang_b = ?",
+            (lang_a, lang_b),
+        ).fetchone()
+        if existing:
+            return jsonify({"error": "该语言组合已存在"}), 400
+
+        cursor = conn.execute(
+            """
+            INSERT INTO language_pairs (lang_a, lang_b, label)
+            VALUES (?, ?, ?)
+            """,
+            (lang_a, lang_b, label),
+        )
+        conn.commit()
+        row = conn.execute(
+            "SELECT * FROM language_pairs WHERE id = ?", (cursor.lastrowid,)
+        ).fetchone()
+
+    return jsonify(row_to_dict(row)), 201
+
+
+@app.put("/api/pairs/<int:pair_id>")
+def update_pair(pair_id: int):
+    """更新语言对。"""
+    from database import get_connection
+
+    data = request.get_json(silent=True) or {}
+    lang_a = (data.get("lang_a") or "").strip()
+    lang_b = (data.get("lang_b") or "").strip()
+    label = (data.get("label") or "").strip()
+
+    if not lang_a or not lang_b or not label:
+        return jsonify({"error": "语言甲名称、语言乙名称、展示标题为必填项"}), 400
+
+    with get_connection() as conn:
+        existing = conn.execute(
+            "SELECT id FROM language_pairs WHERE id = ?", (pair_id,)
+        ).fetchone()
+        if not existing:
+            return jsonify({"error": "语言对不存在"}), 404
+
+        duplicate = conn.execute(
+            "SELECT id FROM language_pairs WHERE lang_a = ? AND lang_b = ? AND id != ?",
+            (lang_a, lang_b, pair_id),
+        ).fetchone()
+        if duplicate:
+            return jsonify({"error": "该语言组合已存在"}), 400
+
+        conn.execute(
+            """
+            UPDATE language_pairs
+            SET lang_a = ?, lang_b = ?, label = ?
+            WHERE id = ?
+            """,
+            (lang_a, lang_b, label, pair_id),
+        )
+        conn.commit()
+        row = conn.execute(
+            "SELECT * FROM language_pairs WHERE id = ?", (pair_id,)
+        ).fetchone()
+
+    return jsonify(row_to_dict(row))
+
+
+@app.delete("/api/pairs/<int:pair_id>")
+def delete_pair(pair_id: int):
+    """删除语言对。"""
+    from database import get_connection
+
+    with get_connection() as conn:
+        existing = conn.execute(
+            "SELECT id FROM language_pairs WHERE id = ?", (pair_id,)
+        ).fetchone()
+        if not existing:
+            return jsonify({"error": "语言对不存在"}), 404
+
+        conn.execute("DELETE FROM language_pairs WHERE id = ?", (pair_id,))
+        conn.commit()
+
+    return "", 204
+
+
 @app.get("/api/pairs/<int:pair_id>/entries")
 def list_entries(pair_id: int):
     """获取某语言对下的全部词条。"""

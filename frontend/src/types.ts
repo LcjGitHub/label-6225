@@ -7,6 +7,13 @@ export interface LanguagePair {
   entry_count?: number
 }
 
+/** 创建/更新语言对请求体 */
+export interface PairPayload {
+  lang_a: string
+  lang_b: string
+  label: string
+}
+
 /** 假朋友词条 */
 export interface Entry {
   id: number

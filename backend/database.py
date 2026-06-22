@@ -27,6 +27,9 @@ def init_db() -> None:
                 label TEXT NOT NULL
             );
 
+            CREATE UNIQUE INDEX IF NOT EXISTS idx_language_pairs_unique
+            ON language_pairs (lang_a, lang_b);
+
             CREATE TABLE IF NOT EXISTS entries (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 pair_id INTEGER NOT NULL,
