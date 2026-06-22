@@ -38,6 +38,14 @@ export async function deletePair(pairId: number): Promise<void> {
   await apiClient.delete(`/pairs/${pairId}`)
 }
 
+/** 从指定语言对中随机抽取一条词条 */
+export async function fetchRandomEntry(pairId: number): Promise<Entry> {
+  const { data } = await apiClient.get<Entry>(
+    `/pairs/${pairId}/entries/random`,
+  )
+  return data
+}
+
 /** 获取语言对下的词条列表，支持关键词搜索 */
 export async function fetchEntries(
   pairId: number,

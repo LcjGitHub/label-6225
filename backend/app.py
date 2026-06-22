@@ -159,6 +159,33 @@ def delete_pair(pair_id: int):
     return "", 204
 
 
+@app.get("/api/pairs/<int:pair_id>/entries/random")
+def get_random_entry(pair_id: int):
+    """从指定语言对中随机抽取一条词条。"""
+    from database import get_connection
+
+    with get_connection() as conn:
+        pair = conn.execute(
+            "SELECT id FROM language_pairs WHERE id = ?", (pair_id,)
+        ).fetchone()
+        if not pair:
+            return jsonify({"error": "语言对不存在"}), 404
+
+        row = conn.execute(
+            """
+            SELECT * FROM entries
+            WHERE pair_id = ?
+            ORDER BY RANDOM()
+            LIMIT 1
+            """,
+            (pair_id,),
+        ).fetchone()
+
+    if not row:
+        return jsonify({"error": "该语言对暂无词条"}), 404
+    return jsonify(row_to_dict(row))
+
+
 @app.get("/api/pairs/<int:pair_id>/entries")
 def list_entries(pair_id: int):
     """获取某语言对下的词条，支持关键词模糊搜索。"""

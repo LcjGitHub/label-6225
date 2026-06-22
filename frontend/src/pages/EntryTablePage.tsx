@@ -30,6 +30,7 @@ import EditIcon from '@mui/icons-material/Edit'
 import FileDownloadIcon from '@mui/icons-material/FileDownload'
 import FileUploadIcon from '@mui/icons-material/FileUpload'
 import SearchIcon from '@mui/icons-material/Search'
+import QuizIcon from '@mui/icons-material/Quiz'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { Link as RouterLink, useParams } from 'react-router-dom'
 import {
@@ -232,6 +233,15 @@ export function EntryTablePage() {
               </Typography>
             </Box>
             <Box sx={{ display: 'flex', gap: 1 }}>
+              <Button
+                variant="outlined"
+                startIcon={<QuizIcon />}
+                component={RouterLink}
+                to={`/pairs/${id}/quiz`}
+                size="small"
+              >
+                测验
+              </Button>
               <Button
                 variant="outlined"
                 startIcon={<FileDownloadIcon />}

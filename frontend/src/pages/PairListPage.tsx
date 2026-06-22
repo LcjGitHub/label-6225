@@ -22,6 +22,7 @@ import AddIcon from '@mui/icons-material/Add'
 import EditIcon from '@mui/icons-material/Edit'
 import DeleteIcon from '@mui/icons-material/Delete'
 import TranslateIcon from '@mui/icons-material/Translate'
+import QuizIcon from '@mui/icons-material/Quiz'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 import { useNavigate } from 'react-router-dom'
 import {
@@ -181,6 +182,18 @@ export function PairListPage() {
             </CardContent>
           </CardActionArea>
           <CardActions sx={{ justifyContent: 'flex-end', pt: 0 }}>
+            <Tooltip title="测验">
+              <IconButton
+                size="small"
+                color="primary"
+                onClick={(e) => {
+                  e.stopPropagation()
+                  navigate(`/pairs/${pair.id}/quiz`)
+                }}
+              >
+                <QuizIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
             <Tooltip title="编辑">
               <IconButton
                 size="small"
